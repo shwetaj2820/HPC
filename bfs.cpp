@@ -1,3 +1,5 @@
+//Design and implement Breadth first search (BFS)on undirected graph/tree  - parallel algorithm utilizing all resources available.
+
 #include<iostream>
 #include<omp.h>
 using namespace std;
