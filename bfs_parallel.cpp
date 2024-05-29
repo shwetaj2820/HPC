@@ -1,3 +1,7 @@
+// file used : edgelist.txt (graph with 5 nodes), gives desired correct BFS traversal
+// problem - code does not work on files given input graph with 1 million or larger graphs
+// error-  terminate called after throwing an instance of 'std::bad_alloc' what():  std::bad_alloc 
+// (caused due to memory shortage)
 #include<iostream>
 #include<fstream>
 #include<string>
@@ -19,7 +23,7 @@ class BFS{
         }
 
         void input(const vector<pair<unsigned long long int, unsigned long long int>>& edges);
-        // void output();
+        void output();
         void bfs();
 };
 
@@ -39,14 +43,14 @@ void BFS::input(const vector<pair<unsigned long long int, unsigned long long int
         }
 }
 
-// void BFS::output(){
-//   for(const auto& row:arr){
-//     for(const auto& element:row){
-//       cout<<element<<" ";
-//     }
-//     cout<<endl;
-//   }
-// }
+void BFS::output(){
+  for(const auto& row:arr){
+    for(const auto& element:row){
+      cout<<element<<" ";
+    }
+    cout<<endl;
+  }
+}
 
 void BFS::bfs(){
   vector<bool> visited(arr.size(), false); // Mark all vertices as not visited
@@ -67,11 +71,7 @@ void BFS::bfs(){
             // Check if vertex i is adjacent to v and has not been visited yet
             if (arr[v][i] && !visited[i]) {
                 // Mark vertex i as visited and enqueue it
-// #pragma omp critical
-                // {
-                    visited[i] = true;
-                    q.push(i);
-                // }
+
             }
         }
     }
@@ -80,7 +80,7 @@ void BFS::bfs(){
 int main(){
 
   // opening file to read edges:
-  ifstream infile("com-youtube.ungraph.txt");
+  ifstream infile("edgelist.txt");
   if(!infile){
     cerr<<"file not found";
     return 1;
