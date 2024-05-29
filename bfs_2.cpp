@@ -5,7 +5,11 @@
 // (every thread processes a subset of nodes and collects the nodes for next level in thread-local set to avoid race conditions)
 // 4. synchronisation- #pragma omp critical (to safely update data structures)
 
-// PROBLEM- order in which nodes enqueued and dequeued in the parallel  region 
+// achieved - can process large graphs because of using chunk_size
+// PROBLEM1- order in which nodes enqueued and dequeued in the parallel  region (hence wrong traversal even in small graph of 5 edges)
+// PROBLEM2- large number of 1's printed at the end of output
+// due to :improper handling of the queue and synchronization in the OpenMP parallel region. 
+// Specifically, the parallel processing of the queue and the use of #pragma omp critical not be managing the state of the currentLevel queue correctly.
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -95,7 +99,7 @@ void BFS::bfs(int startVertex) {
 
 int main() {
     // Opening file to read edges
-    ifstream infile("edgelist.txt");
+    ifstream infile("com-youtube.ungraph.txt");
     if (!infile) {
         cerr << "File not found";
         return 1;
@@ -105,6 +109,15 @@ int main() {
     int u, v;
     vector<pair<int, int>> edges;
     int maxNodeId =0;
+    // Read the first edge to determine the starting node
+    if (!(infile >> u >> v)) {
+        cerr << "No edges found in the file";
+        return 1;
+    }
+
+    int startNode = u;
+    edges.push_back({u, v});
+    maxNodeId = max(u, v);
 
     while (infile >> u >> v) {
         edges.push_back({u, v});
@@ -112,8 +125,7 @@ int main() {
         if (edges.size() >= CHUNK_SIZE) {
             BFS obj(maxNodeId + 1); // Create BFS object with maximum node ID seen so far
             obj.input(edges);
-            cout << "Processing chunk...\n";
-            obj.bfs(0); // Assuming starting BFS from node 0
+            obj.bfs(startNode);
             edges.clear();
         }
     }
@@ -123,8 +135,7 @@ int main() {
     if (!edges.empty()) {
         BFS obj(maxNodeId + 1); // Create BFS object with maximum node ID seen
         obj.input(edges);
-        cout << "Processing last chunk...\n";
-        obj.bfs(0); // Assuming starting BFS from node 0
+        obj.bfs(startNode); // Assuming starting BFS from node 0
     }
 
     return 0;
