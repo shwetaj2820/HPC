@@ -1,5 +1,6 @@
 // optimization:
 // use of queueMutex: to avoid race conditions and control access to the shared queue use of "lock_guard<mutex> lock(queueMutex)" 
+// reading graph in small chunk sizes and applying parallel bfs on it. 
 //Each thread checks and updates the visited status of a node atomically, and only if the node has not been visited before, it proceeds to enqueue the node for traversal.
 #include<iostream>
 #include<fstream>
