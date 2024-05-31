@@ -1,129 +1,132 @@
-//code for solving problems in optimization 1:
-
-// PROBLEM1- wrong traversal in small graph of 5 nodes:
-// solution - using mutex lock to manage concurrent access.
-// persisting problem in this solution- still there are trailing 1's in the end of traversal output when we input large graphs 
-
+// optimization:
+// use of queueMutex: to avoid race conditions and control access to the shared queue use of "lock_guard<mutex> lock(queueMutex)" 
+//Each thread checks and updates the visited status of a node atomically, and only if the node has not been visited before, it proceeds to enqueue the node for traversal.
 #include<iostream>
 #include<fstream>
 #include<string>
 #include<vector>
 #include<queue>
-#include<omp.h>
-#include<mutex>
 #include<unordered_set>
+#include<mutex>
+#include<chrono>
+#include<omp.h>
 
 using namespace std;
+using namespace std::chrono;
 
 class BFS {
     vector<vector<int>> adjList; // adjacency list
-    int numNodes;
-
+    unordered_set<int> nodes; // set to keep track of encountered nodes
+    mutex queueMutex; // Mutex for synchronizing access to the queue
 
 public:
-    BFS(int numNodes) : numNodes(numNodes) //initializer list
-    {
-        adjList.resize(numNodes);
-    }
-
     void input(const vector<pair<int, int>>& edges);
     void bfs(int startVertex);
 };
 
-// undirected graph
+
 void BFS::input(const vector<pair<int, int>>& edges) {
     for (const auto& edge : edges) {
-        adjList[edge.first].push_back(edge.second);
-        adjList[edge.second].push_back(edge.first);
+        int u = edge.first;
+        int v = edge.second;
+
+        nodes.insert(u);
+        nodes.insert(v);
+
+
+        if (u >= adjList.size()) {
+            adjList.resize(u + 1);
+        }
+        if (v >= adjList.size()) {
+            adjList.resize(v + 1);
+        }
+
+        adjList[u].push_back(v);
+        adjList[v].push_back(u); 
     }
 }
 
+
 void BFS::bfs(int startVertex) {
-    vector<bool> visited(numNodes, false);
-    queue<int> currentLevel, nextLevel; 
-    mutex queueMutex;
-    currentLevel.push(startVertex); //pushing start vertex on the queue currentLevel and marking it as visited
+    if (startVertex >= adjList.size()) {
+        cerr << "Start vertex not found in the graph" << endl;
+        return;
+    }
+
+    vector<bool> visited(adjList.size(), false);
+    queue<int> q;
+    vector<int> result;
+
+    q.push(startVertex);
     visited[startVertex] = true;
 
-    while (!currentLevel.empty()) {
-        vector<int>temp_currentLevel;
-
-        // extracting all nodes from current level
-        while(!currentLevel.empty()){
-            temp_currentLevel.push_back(currentLevel.front());
-            currentLevel.pop();
+    while (!q.empty()) {
+        int v;
+        {
+            lock_guard<mutex> lock(queueMutex);
+            if (q.empty()) continue;
+            v = q.front();
+            q.pop();
         }
 
-            #pragma omp parallel for
-            for (int i = 0; i < temp_currentLevel.size(); ++i) {
-                int v = temp_currentLevel[i];
-                #pragma omp critical
-                {
-                    cout << v << " ";
-                }
+        result.push_back(v);
 
-
-            // processing all the adjacent nodes
-                for (int neighbor : adjList[v]) {
-                    if (!visited[neighbor]) {
-                        #pragma omp critical
-                        {
-                            if (!visited[neighbor]) {
-                                visited[neighbor] = true;
-                                queueMutex.lock();
-                                nextLevel.push(neighbor);
-                                queueMutex.unlock();
-                            }
-                        }
-                    }
+        #pragma omp parallel for
+        for (int neighbor : adjList[v]) {
+            if (!visited[neighbor]) {
+                bool expected = false;
+                if (visited[neighbor] == expected) {
+                    visited[neighbor] = true;
+                    lock_guard<mutex> lock(queueMutex);
+                    q.push(neighbor);
                 }
             }
-
-
-        swap(currentLevel, nextLevel);
+        }
     }
+
+    // Printing BFS traversal order
+    for (int node : result) {
+        cout<<node<<" ";
+    }
+    cout << endl;
 }
 
 int main() {
-    // Opening file to read edges
-    ifstream infile("edgelist.txt");
+    auto start = high_resolution_clock::now(); //starting time
+    // Opening file to read edges:
+    ifstream infile("as-skitter.txt");
     if (!infile) {
-        cerr << "File not found";
+        cerr<<"File not found"<<endl;
         return 1;
     }
 
-    const int CHUNK_SIZE = 10000; // processing graph in chunks (to perform BFS on each chunk)
+    const int CHUNK_SIZE = 10000; // Adjusting chunk size(10000 edges) to read edges
     int u, v;
-    vector<pair<int, int>> edges;
-    int maxNodeId =0;
-    // Read the first edge to determine the starting node
-    if (!(infile >> u >> v)) {
-        cerr << "No edges found in the file";
-        return 1;
-    }
+    vector<pair<int, int>>edges;
 
-    int startNode = u;
-    edges.push_back({u, v});
-    maxNodeId = max(u, v);
-
-    while (infile >> u >> v) {
+    while (infile>>u>>v) {
         edges.push_back({u, v});
-        maxNodeId = max(maxNodeId, max(u, v));
+
         if (edges.size() >= CHUNK_SIZE) {
-            BFS obj(maxNodeId + 1); // Create BFS object with maximum node ID seen so far
+            BFS obj;
             obj.input(edges);
-            obj.bfs(startNode);
+            obj.bfs(u); // Starting BFS from the first encountered node in the current chunk
             edges.clear();
         }
     }
     infile.close();
 
-    // Process remaining edges if any
+    // Processing remaining edges at last if any
     if (!edges.empty()) {
-        BFS obj(maxNodeId + 1); // Create BFS object with maximum node ID seen
+        BFS obj;
         obj.input(edges);
-        obj.bfs(startNode); 
+        obj.bfs(u); // Start BFS from the first encountered node in the remaining edges
     }
 
+    auto stop = high_resolution_clock::now(); //stopping time
+    // program duration:
+    auto duration = duration_cast<minutes>(stop - start); 
+
+    cout<<"Execution time: "<<duration.count()<<"minutes"<< endl;
     return 0;
 }
