@@ -22,9 +22,8 @@ class BFS {
 
 public:
     void input(const vector<pair<int, int>>& edges);
-    void bfs(int startVertex);
+    double bfs(int startVertex);
 };
-
 
 void BFS::input(const vector<pair<int, int>>& edges) {
     for (const auto& edge : edges) {
@@ -33,7 +32,6 @@ void BFS::input(const vector<pair<int, int>>& edges) {
 
         nodes.insert(u);
         nodes.insert(v);
-
 
         if (u >= adjList.size()) {
             adjList.resize(u + 1);
@@ -47,11 +45,11 @@ void BFS::input(const vector<pair<int, int>>& edges) {
     }
 }
 
-
-void BFS::bfs(int startVertex) {
+double BFS::bfs(int startVertex) {
+    auto bfs_start = high_resolution_clock::now(); // Start measuring BFS computation time
     if (startVertex >= adjList.size()) {
         cerr << "Start vertex not found in the graph" << endl;
-        return;
+        return 0.0;
     }
 
     vector<bool> visited(adjList.size(), false);
@@ -85,33 +83,39 @@ void BFS::bfs(int startVertex) {
         }
     }
 
+
+
+
     // Printing BFS traversal order
     for (int node : result) {
-        cout<<node<<" ";
+        cout << node << " ";
     }
     cout << endl;
+    auto bfs_stop = high_resolution_clock::now(); // Stop measuring BFS computation time
+    auto bfs_duration = duration_cast<milliseconds>(bfs_stop - bfs_start);
+    return bfs_duration.count()/60000.0; // return BFS computation time in minutes
 }
 
 int main() {
-    auto start = high_resolution_clock::now(); //starting time
     // Opening file to read edges:
     ifstream infile("as-skitter.txt");
     if (!infile) {
-        cerr<<"File not found"<<endl;
+        cerr << "File not found" << endl;
         return 1;
     }
 
-    const int CHUNK_SIZE = 10000; // Adjusting chunk size(10000 edges) to read edges
+    const int CHUNK_SIZE = 10000; // Adjusting chunk size (10000 edges) to read edges
     int u, v;
-    vector<pair<int, int>>edges;
+    vector<pair<int, int>> edges;
+    double total_bfs_time = 0.0;
 
-    while (infile>>u>>v) {
+    while (infile >> u >> v) {
         edges.push_back({u, v});
 
         if (edges.size() >= CHUNK_SIZE) {
             BFS obj;
             obj.input(edges);
-            obj.bfs(u); // Starting BFS from the first encountered node in the current chunk
+            total_bfs_time += obj.bfs(u); // accumulating BFS computation time
             edges.clear();
         }
     }
@@ -121,13 +125,10 @@ int main() {
     if (!edges.empty()) {
         BFS obj;
         obj.input(edges);
-        obj.bfs(u); // Start BFS from the first encountered node in the remaining edges
+        total_bfs_time += obj.bfs(u); // accumulating BFS computation time of remaining edges
     }
 
-    auto stop = high_resolution_clock::now(); //stopping time
-    // program duration:
-    auto duration = duration_cast<minutes>(stop - start); 
+    cout << "Total BFS computation time: " << total_bfs_time << " minutes" << endl;
 
-    cout<<"Execution time: "<<duration.count()<<"minutes"<< endl;
     return 0;
 }
