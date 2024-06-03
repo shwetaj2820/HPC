@@ -1,4 +1,4 @@
-// optimization:
+// optimization 2: use of string buffer
 // use of queueMutex: to avoid race conditions and control access to the shared queue use of "lock_guard<mutex> lock(queueMutex)" 
 // reading graph in small chunk sizes and applying parallel bfs on it. 
 //Each thread checks and updates the visited status of a node atomically, and only if the node has not been visited before, it proceeds to enqueue the node for traversal.
@@ -9,6 +9,7 @@
 #include<queue>
 #include<unordered_set>
 #include<mutex>
+#include<sstream>
 #include<chrono>
 #include<omp.h>
 
@@ -23,6 +24,7 @@ class BFS {
 public:
     void input(const vector<pair<int, int>>& edges);
     double bfs(int startVertex);
+    // void bfs(int startVertex);
 };
 
 void BFS::input(const vector<pair<int, int>>& edges) {
@@ -45,7 +47,8 @@ void BFS::input(const vector<pair<int, int>>& edges) {
     }
 }
 
-double BFS::bfs(int startVertex) {
+// double BFS::bfs(int startVertex) {
+double BFS::bfs(int startVertex){
     auto bfs_start = high_resolution_clock::now(); // Start measuring BFS computation time
     if (startVertex >= adjList.size()) {
         cerr << "Start vertex not found in the graph" << endl;
@@ -82,15 +85,13 @@ double BFS::bfs(int startVertex) {
             }
         }
     }
-
-
-
-
     // Printing BFS traversal order
-    for (int node : result) {
-        cout << node << " ";
+    std::ostringstream buffer;
+    for(int node:result){
+        buffer<<node<<" ";
     }
-    cout << endl;
+    cout<<buffer.str()<<endl;
+    // cout << endl;
     auto bfs_stop = high_resolution_clock::now(); // Stop measuring BFS computation time
     auto bfs_duration = duration_cast<milliseconds>(bfs_stop - bfs_start);
     return bfs_duration.count()/60000.0; // return BFS computation time in minutes
@@ -116,6 +117,7 @@ int main() {
             BFS obj;
             obj.input(edges);
             total_bfs_time += obj.bfs(u); // accumulating BFS computation time
+            obj.bfs(u);
             edges.clear();
         }
     }
@@ -126,6 +128,7 @@ int main() {
         BFS obj;
         obj.input(edges);
         total_bfs_time += obj.bfs(u); // accumulating BFS computation time of remaining edges
+        obj.bfs(u);
     }
 
     cout << "Total BFS computation time: " << total_bfs_time << " minutes" << endl;
