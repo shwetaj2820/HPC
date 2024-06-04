@@ -1,7 +1,6 @@
 // optimizations:
 // 1. use of string buffer to accumulate output (and print result at once) hence reduces the "cout" individual call overheads
 // 2. pushing nodes on the queue inside a seprate mutex protected critical section to lessen the time mutex is held 
-// 3. mistake corrected from previous code - it had extra BFS function calls in main(); removed it
 #include<iostream>
 #include<fstream>
 #include<string>
