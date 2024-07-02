@@ -18,7 +18,7 @@ int main() {
     float delta = 0.85; // Damping factor
     int maxIter = 150; // Maximum number of iterations
 
-    float* pageRank = new float[g.num_nodes()]; // Allocate memory for PageRank array
+    float* pageRank = new float[g.num_nodes()];
 
     double starttime = omp_get_wtime();
    ComputePageRank(g, beta, delta, maxIter, pageRank);
